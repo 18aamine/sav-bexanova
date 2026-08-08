@@ -46,8 +46,36 @@ async function geminiComplete({ system, user, maxTokens = 1500, json = false }) 
   return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') ?? '';
 }
 
+async function groqComplete({ system, user, maxTokens = 1500, json = false }) {
+  const { apiKey, model } = config.llm.groq;
+  if (!apiKey) throw new Error('GROQ_API_KEY manquante (LLM_PROVIDER=groq).');
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      ...(json ? { response_format: { type: 'json_object' } } : {}),
+    }),
+  });
+  if (!res.ok) throw new Error(`Groq API ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? '';
+}
+
 function complete(opts) {
-  return config.llm.provider === 'gemini' ? geminiComplete(opts) : claudeComplete(opts);
+  const p = config.llm.provider;
+  if (p === 'gemini') return geminiComplete(opts);
+  if (p === 'groq') return groqComplete(opts);
+  return claudeComplete(opts);
 }
 
 export async function completeText(system, user, maxTokens = 1500) {

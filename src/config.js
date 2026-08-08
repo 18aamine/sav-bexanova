@@ -65,6 +65,10 @@ export const config = {
       apiKey: opt('GEMINI_API_KEY'),
       model: opt('GEMINI_MODEL', 'gemini-2.0-flash'),
     },
+    groq: {
+      apiKey: opt('GROQ_API_KEY'),
+      model: opt('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+    },
   },
 
   // --- Comportement ---

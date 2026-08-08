@@ -55,7 +55,13 @@ const checks = [
 console.log('=== Diagnostic SAV Bexanova ===');
 let failures = 0;
 for (const [name, fn] of checks) {
-  try { await fn(); } catch (e) { ko(`${name} : ${e.message}`); failures++; }
+  try {
+    await fn();
+  } catch (e) {
+    const detail = e.message || e.responseText || e.serverResponseCode || e.code || JSON.stringify(e);
+    ko(`${name} : ${detail}`);
+    failures++;
+  }
 }
 console.log(failures === 0 ? '\n🎉 Tout est bon, prêt à tourner.' : `\n⚠️ ${failures} problème(s) à corriger.`);
 process.exit(failures === 0 ? 0 : 1);
