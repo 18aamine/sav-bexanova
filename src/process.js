@@ -61,7 +61,7 @@ export async function processEmail(client, email) {
   }
 
   // 5) Rédaction
-  const body = await composeReply({ analysis, order, missingInfo });
+  const body = await composeReply({ analysis, order, missingInfo, senderName: email.fromName });
 
   // 6) Envoi ou mise en attente de validation
   const mail = {
