@@ -21,7 +21,10 @@ Champs à renvoyer :
 - "customer_name": nom complet du client s'il est donné dans le corps/signature, sinon null.
 - "email_in_body": une adresse email de commande citée dans le texte (différente de l'expéditeur) ou null.
 - "summary": résumé en 1 phrase (dans la langue du client) de ce que veut le client.
-- "sentiment": "calme", "inquiet" ou "mecontent".`;
+- "summary_fr": le même résumé, mais EN FRANÇAIS (pour le gérant qui ne lit pas l'espagnol).
+- "sentiment": "calme", "inquiet" ou "mecontent".
+
+Sois prudent avec "ignorer" : ne l'utilise QUE pour du spam, de la pub, une notification 100% automatique ou un message vide. Un vrai message de client (même court, même un remerciement avec une question) N'EST PAS "ignorer".`;
 
 export async function analyzeEmail({ from, fromName, subject, text }) {
   const user = `De: ${fromName} <${from}>
@@ -39,6 +42,7 @@ ${text.slice(0, 1200)}`;
     customerName: r.customer_name || null,
     emailInBody: (r.email_in_body || '').toLowerCase() || null,
     summary: r.summary || '',
+    summaryFr: r.summary_fr || r.summary || '',
     sentiment: r.sentiment || 'calme',
   };
 }

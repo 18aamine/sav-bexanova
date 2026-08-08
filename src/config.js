@@ -81,7 +81,7 @@ export const config = {
     "L'équipe Bexanova\nservice client",
   ),
   // Emails internes à ne jamais traiter comme des clients (fournisseurs, notifs…)
-  ignoreSenders: opt('IGNORE_SENDERS', 'no-reply,noreply,mailer-daemon,postmaster,shopify,klaviyo')
+  ignoreSenders: opt('IGNORE_SENDERS', 'mailer-daemon,postmaster')
     .split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
 };
 

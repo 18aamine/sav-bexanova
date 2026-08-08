@@ -47,6 +47,7 @@ export async function fetchUnseen(client) {
         messageId: parsed.messageId,
         from: parsed.from?.value?.[0]?.address?.toLowerCase() || '',
         fromName: parsed.from?.value?.[0]?.name || '',
+        replyTo: parsed.replyTo?.value?.[0]?.address?.toLowerCase() || '',
         subject: parsed.subject || '',
         date: parsed.date,
         text: (parsed.text || '').trim(),
@@ -102,7 +103,19 @@ function bodyToHtml(text) {
 
 const PINK = '#E5398B';
 
-function buildHtml({ body, trackingUrl, language }) {
+// Encadré interne en français pour le gérant (uniquement dans les brouillons à valider).
+function ownerNoteHtml(note) {
+  if (!note) return '';
+  const lines = escapeHtml(note).replace(/\n/g, '<br>');
+  return `<tr><td style="padding:16px 40px 0 40px;">
+    <div style="background:#fff8e1;border:1px solid #ffe08a;border-radius:10px;padding:14px 16px;font-size:13.5px;color:#5a4b17;line-height:1.6;">
+      <div style="font-weight:700;color:#b9860b;margin-bottom:6px;">⚠️ NOTE POUR TOI — à SUPPRIMER avant d'envoyer</div>
+      ${lines}
+    </div>
+  </td></tr>`;
+}
+
+function buildHtml({ body, trackingUrl, language, ownerNote }) {
   const lang = ['es', 'fr', 'en'].includes(language) ? language : 'es';
   const header = LOGO
     ? `<img src="cid:logobexanova" alt="Bexanova" width="176" style="display:block;width:176px;max-width:60%;height:auto;">`
@@ -114,6 +127,7 @@ function buildHtml({ body, trackingUrl, language }) {
   return `<div style="margin:0;padding:24px 12px;background:#f4f4f6;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(17,17,26,0.06);">
     <tr><td style="height:5px;background:${PINK};"></td></tr>
+    ${ownerNoteHtml(ownerNote)}
     <tr><td align="center" style="padding:32px 40px 8px 40px;">${header}</td></tr>
     <tr><td style="padding:0 40px;"><div style="height:1px;background:#f0f0f2;margin:16px 0 4px;"></div></td></tr>
     <tr><td style="padding:20px 40px 6px 40px;color:#2b2b31;font-size:15.5px;line-height:1.65;">${bodyToHtml(body)}</td></tr>
@@ -134,15 +148,16 @@ function buildHtml({ body, trackingUrl, language }) {
 }
 
 // Options communes (texte + HTML + logo inline) pour l'envoi ET le brouillon.
-function buildMessage({ to, subject, body, inReplyTo, references, trackingUrl, language }) {
+function buildMessage({ to, subject, body, inReplyTo, references, trackingUrl, language, ownerNote }) {
   const lang = ['es', 'fr', 'en'].includes(language) ? language : 'es';
   const s = SIGN_OFF[lang];
+  const noteTxt = ownerNote ? `⚠️ NOTE POUR TOI — à SUPPRIMER avant d'envoyer\n${ownerNote}\n----------------------------------------\n\n` : '';
   const opts = {
     from: `"${config.smtp.fromName}" <${config.smtp.fromAddress || config.smtp.user}>`,
     to,
     subject: subject.startsWith('Re:') ? subject : `Re: ${subject}`,
-    text: `${body}\n\n${s.close}\n${s.team}`, // repli texte brut, avec signature
-    html: buildHtml({ body, trackingUrl, language }),
+    text: `${noteTxt}${body}\n\n${s.close}\n${s.team}`, // repli texte brut, avec signature
+    html: buildHtml({ body, trackingUrl, language, ownerNote }),
     inReplyTo,
     references,
   };
