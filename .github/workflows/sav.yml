@@ -1,0 +1,52 @@
+name: SAV Bexanova
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'run = traiter les mails | check = diagnostic connexions'
+        type: choice
+        default: run
+        options: [run, check]
+
+concurrency:
+  group: sav-run
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci --omit=dev
+      - name: Executer
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "check" ]; then
+            node src/healthcheck.js
+          else
+            node src/index.js
+          fi
+        env:
+          IMAP_HOST: ${{ secrets.IMAP_HOST }}
+          IMAP_PORT: ${{ secrets.IMAP_PORT }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
+          MAIL_FROM_ADDRESS: ${{ secrets.MAIL_FROM_ADDRESS }}
+          SHOPIFY_SHOP: ${{ secrets.SHOPIFY_SHOP }}
+          SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AUTO_SEND: ${{ secrets.AUTO_SEND }}
+          DRY_RUN: ${{ secrets.DRY_RUN }}
+          MAIL_SIGNATURE: ${{ secrets.MAIL_SIGNATURE }}
