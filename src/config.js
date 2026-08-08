@@ -39,6 +39,9 @@ export const config = {
     fromAddress: opt('MAIL_FROM_ADDRESS', process.env.MAIL_USER || ''),
   },
 
+  // Dossier "Envoyés" où sauvegarder une copie des réponses auto (SMTP ne le fait pas).
+  sentFolder: opt('SENT_FOLDER', 'Sent'),
+
   // Dossiers IMAP de classement (créés automatiquement s'ils n'existent pas)
   folders: {
     validate: opt('FOLDER_VALIDATE', 'SAV_A_valider'),   // brouillons à relire (cas sensibles)
@@ -74,7 +77,7 @@ export const config = {
   // --- Comportement ---
   autoSend: bool('AUTO_SEND', true),     // false => tout part en brouillon "À valider"
   dryRun: bool('DRY_RUN', false),        // true => n'envoie/ne déplace rien, log seulement
-  maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '4')),
+  maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '8')),
   pauseBetweenMs: Number(opt('PAUSE_BETWEEN_MS', '8000')), // espace les appels IA (limite de débit gratuite)
   signature: opt(
     'MAIL_SIGNATURE',

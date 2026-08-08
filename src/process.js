@@ -60,8 +60,9 @@ function buildOwnerNote({ analysis, order, customerEmail, fromName }) {
 export async function processEmail(client, email) {
   const log = (m) => console.log(`  [${email.from}] ${m}`);
 
-  // 0) Filtre expéditeurs à ignorer (notifs, no-reply…)
-  if (config.ignoreSenders.some(s => email.from.includes(s))) {
+  // 0) Filtre expéditeurs à ignorer : sa propre adresse (anti-boucle), notifs, no-reply…
+  const self = (config.smtp.user || '').toLowerCase();
+  if (email.from === self || config.ignoreSenders.some(s => email.from.includes(s))) {
     log('expéditeur ignoré → SAV_Ignore');
     await moveToFolder(client, email.uid, config.folders.skipped);
     return { intent: 'ignorer', action: 'skip' };
@@ -126,7 +127,7 @@ export async function processEmail(client, email) {
   };
 
   if (decision.action === 'send') {
-    await sendReply(mail);
+    await sendReply(client, mail);
     await moveToFolder(client, email.uid, config.folders.done);
     log(`✅ répondu automatiquement (${decision.reason})`);
     return { ...analysis, action: 'send', order: order?.orderNumber || null };

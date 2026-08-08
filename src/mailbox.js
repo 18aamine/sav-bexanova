@@ -178,10 +178,32 @@ function smtp() {
   return transporter;
 }
 
-// Envoie réellement la réponse au client.
-export async function sendReply(msg) {
+// Sauvegarde une copie du message envoyé dans le dossier "Envoyés" (SMTP ne le fait pas).
+async function saveToSent(client, rawMessage) {
+  const candidates = [config.sentFolder, 'Sent', 'Envoyés', 'INBOX.Sent', 'Sent Items'];
+  for (const folder of candidates) {
+    try {
+      await client.append(folder, rawMessage, ['\\Seen']);
+      return true;
+    } catch { /* essaie le suivant */ }
+  }
+  return false;
+}
+
+// Envoie réellement la réponse au client + garde une copie dans "Envoyés".
+export async function sendReply(client, msg) {
   if (config.dryRun) return { dryRun: true };
-  return smtp().sendMail(buildMessage(msg));
+  const options = buildMessage(msg);
+  const info = await smtp().sendMail(options);
+  // Preuve d'envoi : ce que le serveur SMTP a réellement répondu.
+  console.log(`  ✉️ SMTP → to=${msg.to} | accepted=${JSON.stringify(info.accepted)} | rejected=${JSON.stringify(info.rejected)} | response="${info.response}"`);
+  try {
+    const composer = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: 'crlf' });
+    const built = await composer.sendMail(options);
+    const ok = await saveToSent(client, built.message);
+    if (!ok) console.warn('  (copie dans "Envoyés" impossible : dossier introuvable)');
+  } catch (e) { console.warn(`  (copie "Envoyés" échouée : ${e.message})`); }
+  return info;
 }
 
 // Dépose un brouillon (HTML + logo) dans le dossier "À valider".
