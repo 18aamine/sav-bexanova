@@ -9,6 +9,16 @@ import { moveToFolder, appendDraft, sendReply } from './mailbox.js';
 // Intentions qui n'ont pas besoin d'une commande pour répondre.
 const NO_ORDER_NEEDED = new Set(['demande_avant_achat', 'info_produit', 'taille']);
 
+// Lien de suivi pour le footer : suivi réel de la commande si dispo, sinon page ParcelPanel générale.
+function trackingUrlFor(order) {
+  if (order) {
+    const t = order.fulfillments.flatMap(f => f.tracking).find(x => x.url || x.number);
+    if (t?.url) return t.url;
+    if (t?.number) return `https://bexanova.com/apps/parcelpanel?nums=${encodeURIComponent(t.number)}`;
+  }
+  return 'https://bexanova.com/apps/parcelpanel';
+}
+
 export async function processEmail(client, email) {
   const log = (m) => console.log(`  [${email.from}] ${m}`);
 
@@ -70,6 +80,8 @@ export async function processEmail(client, email) {
     body,
     inReplyTo: email.messageId,
     references: email.references,
+    trackingUrl: trackingUrlFor(order),
+    language: analysis.language,
   };
 
   if (decision.action === 'send') {
