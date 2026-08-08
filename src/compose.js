@@ -14,9 +14,11 @@ RÈGLES ABSOLUES :
 - Si une donnée manque pour répondre, demande UNIQUEMENT le strict nécessaire (jamais une info déjà connue).
 - Salutation : utilise le PRÉNOM du client fourni ("Nom du client"). Si aucun nom n'est fourni, utilise une salutation neutre et chaleureuse (ex: "Hola" / "Bonjour" / "Hello"). N'invente JAMAIS un prénom.
 - Ton naturel, humain, rassurant si le client est inquiet. Pas de langage robotique, pas de copier-coller.
-- Sois concis (5-10 lignes max). Pas de promesses que les données ne garantissent pas.
-- Ne mets PAS d'objet, PAS de "Cc", commence directement par la salutation.
-- Termine par la signature fournie (traduite dans la langue du client).`;
+- Sois concis (4-8 lignes max). Pas de promesses que les données ne garantissent pas.
+- Commence par UNE SEULE salutation avec le prénom (ex: « Hola María, »). JAMAIS deux salutations.
+- Ne récite pas l'adresse complète du client, sauf si sa demande concerne justement l'adresse.
+- Ne mets PAS d'objet, PAS de "Cc".
+- IMPORTANT : n'écris AUCUNE formule de clôture ni signature (pas de « Atentamente », pas de « Un saludo », pas de nom d'équipe, JAMAIS de crochets comme « [Nom] » ou « [Bexanova] »). Termine simplement par ta dernière phrase utile — la signature est ajoutée automatiquement après.`;
 
 // Traduit les codes de statut Shopify en descriptions neutres (jamais montrées telles quelles au client).
 function humanFulfillment(status) {
@@ -82,9 +84,6 @@ ${missingInfo?.length ? `Informations manquantes à demander (uniquement celles-
 DONNÉES (source de vérité — ne rien ajouter, ne rien inventer) :
 ${factsBlock(order)}
 
-SIGNATURE à utiliser à la fin (traduite dans la langue du client) :
-${config.signature}
-
-Rédige maintenant l'email de réponse.`;
+Rédige maintenant l'email de réponse (SANS signature ni formule de clôture — elle sera ajoutée automatiquement).`;
   return completeText(SYSTEM, user, 1200);
 }

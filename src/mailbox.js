@@ -75,6 +75,11 @@ export async function moveToFolder(client, uid, folder) {
 
 // ---------- Mise en forme HTML (template de marque) ----------
 const TRACK_LABEL = { es: 'Seguir mi pedido', fr: 'Suivre ma commande', en: 'Track my order' };
+const SIGN_OFF = {
+  es: { close: 'Atentamente,', team: 'El equipo Bexanova', role: 'Atención al cliente' },
+  fr: { close: 'Cordialement,', team: 'L\'équipe Bexanova', role: 'Service client' },
+  en: { close: 'Best regards,', team: 'The Bexanova team', role: 'Customer care' },
+};
 const FOOTER_NOTE = {
   es: 'Este mensaje es una respuesta a tu solicitud de atención al cliente.',
   fr: 'Ce message est une réponse à votre demande au service client.',
@@ -105,12 +110,20 @@ function buildHtml({ body, trackingUrl, language }) {
   const trackBtn = trackingUrl
     ? `<a href="${escapeHtml(trackingUrl)}" style="display:inline-block;margin-bottom:10px;color:${PINK};text-decoration:none;font-size:13px;font-weight:700;">📦 ${TRACK_LABEL[lang]} →</a><br>`
     : '';
+  const s = SIGN_OFF[lang];
   return `<div style="margin:0;padding:24px 12px;background:#f4f4f6;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(17,17,26,0.06);">
     <tr><td style="height:5px;background:${PINK};"></td></tr>
     <tr><td align="center" style="padding:32px 40px 8px 40px;">${header}</td></tr>
     <tr><td style="padding:0 40px;"><div style="height:1px;background:#f0f0f2;margin:16px 0 4px;"></div></td></tr>
-    <tr><td style="padding:20px 40px 24px 40px;color:#2b2b31;font-size:15.5px;line-height:1.65;">${bodyToHtml(body)}</td></tr>
+    <tr><td style="padding:20px 40px 6px 40px;color:#2b2b31;font-size:15.5px;line-height:1.65;">${bodyToHtml(body)}</td></tr>
+    <tr><td style="padding:6px 40px 26px 40px;">
+      <div style="color:#2b2b31;font-size:15px;margin-bottom:10px;">${s.close}</div>
+      <div style="border-left:3px solid ${PINK};padding-left:14px;">
+        <div style="font-size:15px;font-weight:700;color:${PINK};">${s.team}</div>
+        <div style="font-size:13px;color:#8a8a93;margin-top:2px;">${s.role} · soporte@bexanova.com</div>
+      </div>
+    </td></tr>
     <tr><td style="background:#faf7f9;padding:20px 40px;text-align:center;">
       ${trackBtn}
       <a href="https://bexanova.com" style="color:${PINK};text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.3px;">bexanova.com</a>
@@ -122,11 +135,13 @@ function buildHtml({ body, trackingUrl, language }) {
 
 // Options communes (texte + HTML + logo inline) pour l'envoi ET le brouillon.
 function buildMessage({ to, subject, body, inReplyTo, references, trackingUrl, language }) {
+  const lang = ['es', 'fr', 'en'].includes(language) ? language : 'es';
+  const s = SIGN_OFF[lang];
   const opts = {
     from: `"${config.smtp.fromName}" <${config.smtp.fromAddress || config.smtp.user}>`,
     to,
     subject: subject.startsWith('Re:') ? subject : `Re: ${subject}`,
-    text: body, // repli texte brut
+    text: `${body}\n\n${s.close}\n${s.team}`, // repli texte brut, avec signature
     html: buildHtml({ body, trackingUrl, language }),
     inReplyTo,
     references,
