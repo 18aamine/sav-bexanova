@@ -1,0 +1,21 @@
+{
+  "name": "sav-bexanova",
+  "version": "1.0.0",
+  "description": "Agent SAV autonome Bexanova — IMAP/SMTP + Shopify + IA (Claude/Gemini)",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "once": "node src/index.js --once",
+    "dry": "DRY_RUN=true node src/index.js --once",
+    "check": "node src/healthcheck.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "imapflow": "^1.0.164",
+    "mailparser": "^3.7.1",
+    "nodemailer": "^6.9.14"
+  }
+}
