@@ -67,14 +67,15 @@ export const config = {
     },
     groq: {
       apiKey: opt('GROQ_API_KEY'),
-      model: opt('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+      model: opt('GROQ_MODEL', 'llama-3.1-8b-instant'),
     },
   },
 
   // --- Comportement ---
   autoSend: bool('AUTO_SEND', true),     // false => tout part en brouillon "À valider"
   dryRun: bool('DRY_RUN', false),        // true => n'envoie/ne déplace rien, log seulement
-  maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '6')),
+  maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '4')),
+  pauseBetweenMs: Number(opt('PAUSE_BETWEEN_MS', '8000')), // espace les appels IA (limite de débit gratuite)
   signature: opt(
     'MAIL_SIGNATURE',
     "L'équipe Bexanova\nservice client",

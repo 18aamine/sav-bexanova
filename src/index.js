@@ -16,8 +16,12 @@ async function main() {
     const emails = await fetchUnseen(client);
     console.log(`${emails.length} email(s) non lu(s) à traiter.`);
 
-    for (const email of emails) {
+    for (const [i, email] of emails.entries()) {
       stats.total++;
+      // Espace les traitements pour rester sous la limite de débit gratuite de l'IA.
+      if (i > 0 && config.pauseBetweenMs > 0) {
+        await new Promise(r => setTimeout(r, config.pauseBetweenMs));
+      }
       try {
         const r = await processEmail(client, email);
         stats[r.action] = (stats[r.action] || 0) + 1;

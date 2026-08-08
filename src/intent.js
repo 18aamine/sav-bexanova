@@ -27,7 +27,7 @@ export async function analyzeEmail({ from, fromName, subject, text }) {
   const user = `De: ${fromName} <${from}>
 Sujet: ${subject}
 
-${text.slice(0, 4000)}`;
+${text.slice(0, 1200)}`;
   const r = await completeJSON(SYSTEM, user);
   // Normalisation défensive
   if (!INTENTS.includes(r.intent)) r.intent = 'autre';
