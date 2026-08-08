@@ -2,6 +2,8 @@
 // Pour changer de fournisseur : mettre LLM_PROVIDER=gemini (ou claude) dans les Secrets.
 import { config } from './config.js';
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function claudeComplete({ system, user, maxTokens = 1500, json = false }) {
   const { apiKey, model } = config.llm.claude;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY manquante (LLM_PROVIDER=claude).');
@@ -49,26 +51,34 @@ async function geminiComplete({ system, user, maxTokens = 1500, json = false }) 
 async function groqComplete({ system, user, maxTokens = 1500, json = false }) {
   const { apiKey, model } = config.llm.groq;
   if (!apiKey) throw new Error('GROQ_API_KEY manquante (LLM_PROVIDER=groq).');
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      temperature: 0.4,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      ...(json ? { response_format: { type: 'json_object' } } : {}),
-    }),
-  });
-  if (!res.ok) throw new Error(`Groq API ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
+  // Retry automatique sur limite de débit (429) : on respecte le délai indiqué par Groq.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        ...(json ? { response_format: { type: 'json_object' } } : {}),
+      }),
+    });
+    if (res.status === 429) {
+      const body = await res.text();
+      const m = body.match(/try again in ([\d.]+)s/i);
+      const waitMs = Math.min((m ? parseFloat(m[1]) * 1000 : (attempt + 1) * 4000) + 600, 30000);
+      await sleep(waitMs);
+      continue;
+    }
+    if (!res.ok) throw new Error(`Groq API ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? '';
+  }
+  throw new Error('Groq API: limite de débit persistante après plusieurs tentatives.');
 }
 
 function complete(opts) {

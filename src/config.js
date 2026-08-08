@@ -74,7 +74,7 @@ export const config = {
   // --- Comportement ---
   autoSend: bool('AUTO_SEND', true),     // false => tout part en brouillon "À valider"
   dryRun: bool('DRY_RUN', false),        // true => n'envoie/ne déplace rien, log seulement
-  maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '25')),
+  maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '6')),
   signature: opt(
     'MAIL_SIGNATURE',
     "L'équipe Bexanova\nservice client",
