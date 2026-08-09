@@ -46,6 +46,7 @@ export const config = {
   folders: {
     validate: opt('FOLDER_VALIDATE', 'SAV_A_valider'),   // brouillons à relire (cas sensibles)
     correct: opt('FOLDER_CORRECT', 'SAV_Corriger'),      // brouillons annotés par le gérant → à réécrire + envoyer
+    archive: opt('FOLDER_ARCHIVE', 'SAV_Corrections'),   // archive des corrections faites (pour en tirer des règles)
     done: opt('FOLDER_DONE', 'SAV_Traite'),              // mails traités + répondus auto
     skipped: opt('FOLDER_SKIPPED', 'SAV_Ignore'),        // non-SAV (spam, fournisseur…)
     error: opt('FOLDER_ERROR', 'SAV_Erreur'),            // à traiter à la main

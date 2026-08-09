@@ -76,8 +76,9 @@ export async function processCorrection(client, email) {
     trackingUrl: 'https://bexanova.com/apps/parcelpanel',
     language: 'es',
   });
-  await moveFromFolder(client, config.folders.correct, email.uid, config.folders.done);
-  console.log(`  [correction→${to}] ✅ consigne du gérant appliquée et envoyée`);
+  // Archive la correction (pour en tirer des règles plus tard).
+  await moveFromFolder(client, config.folders.correct, email.uid, config.folders.archive);
+  console.log(`  [correction→${to}] ✅ consigne du gérant appliquée et envoyée (archivée dans SAV_Corrections)`);
   return { action: 'send' };
 }
 
