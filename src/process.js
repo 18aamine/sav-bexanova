@@ -3,8 +3,8 @@ import { config } from './config.js';
 import { analyzeEmail } from './intent.js';
 import { findOrder } from './shopify.js';
 import { route } from './router.js';
-import { composeReply } from './compose.js';
-import { moveToFolder, appendDraft, sendReply } from './mailbox.js';
+import { composeReply, reviseReply } from './compose.js';
+import { moveToFolder, moveFromFolder, appendDraft, sendReply } from './mailbox.js';
 
 // Intentions qui n'ont pas besoin d'une commande pour répondre.
 const NO_ORDER_NEEDED = new Set(['demande_avant_achat', 'info_produit', 'taille']);
@@ -55,6 +55,30 @@ function buildOwnerNote({ analysis, order, customerEmail, fromName }) {
     `🏷️ Type : ${INTENT_FR[analysis.intent] || analysis.intent}`,
     `✅ Reco : réponse prudente rédigée en espagnol ci-dessous. Relis, puis effectue l'action (remboursement / annulation / échange) dans Shopify si tu es d'accord.`,
   ].join('\n');
+}
+
+// Traite un brouillon annoté par le gérant (dossier SAV_Corriger) : applique la consigne et envoie au client.
+export async function processCorrection(client, email) {
+  const self = (config.smtp.user || '').toLowerCase();
+  const to = email.to && email.to !== self ? email.to : null;
+  if (!to) {
+    console.log(`  [correction] ⚠️ destinataire client introuvable → SAV_Erreur`);
+    await moveFromFolder(client, config.folders.correct, email.uid, config.folders.error);
+    return { action: 'error' };
+  }
+  const body = await reviseReply(email.text);
+  await sendReply(client, {
+    to,
+    subject: email.subject || 'Votre demande',
+    body,
+    inReplyTo: email.inReplyTo,
+    references: email.references,
+    trackingUrl: 'https://bexanova.com/apps/parcelpanel',
+    language: 'es',
+  });
+  await moveFromFolder(client, config.folders.correct, email.uid, config.folders.done);
+  console.log(`  [correction→${to}] ✅ consigne du gérant appliquée et envoyée`);
+  return { action: 'send' };
 }
 
 export async function processEmail(client, email) {

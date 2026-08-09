@@ -31,12 +31,12 @@ export async function ensureFolders(client) {
   }
 }
 
-// Récupère les mails non lus de l'INBOX (les plus anciens d'abord).
-export async function fetchUnseen(client) {
-  const lock = await client.getMailboxLock(config.imap.inbox);
+// Récupère les mails d'un dossier (non lus par défaut ; tous si onlyUnseen=false).
+export async function fetchUnseenFrom(client, folder, { onlyUnseen = true } = {}) {
+  const lock = await client.getMailboxLock(folder);
   const results = [];
   try {
-    const uids = await client.search({ seen: false }, { uid: true });
+    const uids = await client.search(onlyUnseen ? { seen: false } : { all: true }, { uid: true });
     const slice = uids.slice(0, config.maxEmailsPerRun);
     for (const uid of slice) {
       const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
@@ -48,6 +48,7 @@ export async function fetchUnseen(client) {
         from: parsed.from?.value?.[0]?.address?.toLowerCase() || '',
         fromName: parsed.from?.value?.[0]?.name || '',
         replyTo: parsed.replyTo?.value?.[0]?.address?.toLowerCase() || '',
+        to: parsed.to?.value?.[0]?.address?.toLowerCase() || '',
         subject: parsed.subject || '',
         date: parsed.date,
         text: (parsed.text || '').trim(),
@@ -60,6 +61,23 @@ export async function fetchUnseen(client) {
     lock.release();
   }
   return results;
+}
+
+// Mails non lus de l'INBOX.
+export function fetchUnseen(client) {
+  return fetchUnseenFrom(client, config.imap.inbox);
+}
+
+// Déplace un message depuis un dossier source vers un dossier cible.
+export async function moveFromFolder(client, sourceFolder, uid, targetFolder) {
+  if (config.dryRun) return;
+  const lock = await client.getMailboxLock(sourceFolder);
+  try {
+    await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true });
+    await client.messageMove(uid, targetFolder, { uid: true });
+  } finally {
+    lock.release();
+  }
 }
 
 // Déplace un message (par UID) vers un dossier de classement, et le marque lu.

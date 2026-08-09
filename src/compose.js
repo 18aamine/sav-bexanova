@@ -18,7 +18,11 @@ RÈGLES ABSOLUES :
 - Commence par UNE SEULE salutation avec le prénom (ex: « Hola María, »). JAMAIS deux salutations.
 - Ne récite pas l'adresse complète du client, sauf si sa demande concerne justement l'adresse.
 - Ne mets PAS d'objet, PAS de "Cc".
-- IMPORTANT : n'écris AUCUNE formule de clôture ni signature (pas de « Atentamente », pas de « Un saludo », pas de nom d'équipe, JAMAIS de crochets comme « [Nom] » ou « [Bexanova] »). Termine simplement par ta dernière phrase utile — la signature est ajoutée automatiquement après.`;
+- IMPORTANT : n'écris AUCUNE formule de clôture ni signature (pas de « Atentamente », pas de « Un saludo », pas de nom d'équipe, JAMAIS de crochets comme « [Nom] » ou « [Bexanova] »). Termine simplement par ta dernière phrase utile — la signature est ajoutée automatiquement après.
+
+═══ RÈGLES & RESSOURCES BEXANOVA (applique-les quand c'est pertinent) ═══
+- 📘 eBook offert « La Verdad Sobre el Vientre Postparto » : si la cliente dit qu'elle n'a pas reçu le livre numérique / eBook, ou le réclame, DONNE-LUI directement ce lien de téléchargement dans ta réponse :
+  https://cdn.shopify.com/s/files/1/1002/7922/2655/files/eBook_Exclusivo_La_Verdad_Sobre_el_Vientre_Postparto_compressed.pdf?v=1780432877`;
 
 // Traduit les codes de statut Shopify en descriptions neutres (jamais montrées telles quelles au client).
 function humanFulfillment(status) {
@@ -69,6 +73,20 @@ function cleanName(name) {
   const n = String(name).trim();
   if (!n || n.includes('@')) return '';
   return n.split(/\s+/)[0]; // prénom uniquement
+}
+
+// Réécrit un brouillon en appliquant la consigne (en français) que le gérant a ajoutée dessus.
+const REVISE_SYSTEM = `Tu es le/la conseiller(ère) SAV de Bexanova. On te donne le contenu d'un brouillon de réponse que le gérant a annoté.
+- Le texte en FRANÇAIS (souvent tout en haut, ou une note) est la CONSIGNE du gérant : ce qu'il veut ajouter, changer ou corriger.
+- Le reste est le brouillon d'origine : une note interne (encadré) + la réponse au client dans SA langue.
+Produis la RÉPONSE FINALE à envoyer au client :
+- dans la MÊME langue que la réponse d'origine (généralement espagnol),
+- en appliquant fidèlement la consigne du gérant,
+- SANS la note interne, SANS la consigne du gérant, SANS aucune signature (ajoutée automatiquement ensuite),
+- commence directement par la salutation, ton naturel et chaleureux.`;
+
+export async function reviseReply(rawText) {
+  return completeText(REVISE_SYSTEM, String(rawText || '').slice(0, 4000), 1200);
 }
 
 export async function composeReply({ analysis, order, missingInfo, senderName }) {

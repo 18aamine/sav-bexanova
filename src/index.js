@@ -1,8 +1,8 @@
 // Point d'entrée : ouvre la boîte, traite les mails non lus, classe, ferme.
 // Conçu pour être lancé par un cron (GitHub Actions) toutes les ~15 min.
 import { config } from './config.js';
-import { openMailbox, ensureFolders, fetchUnseen, moveToFolder } from './mailbox.js';
-import { processEmail } from './process.js';
+import { openMailbox, ensureFolders, fetchUnseen, fetchUnseenFrom, moveToFolder, moveFromFolder } from './mailbox.js';
+import { processEmail, processCorrection } from './process.js';
 
 async function main() {
   const started = Date.now();
@@ -30,6 +30,21 @@ async function main() {
         console.error(`  ❌ erreur sur ${email.from}: ${err.message}`);
         // On classe en "Erreur" pour traitement manuel, sans bloquer le reste.
         try { await moveToFolder(client, email.uid, config.folders.error); } catch {}
+      }
+    }
+
+    // 2e passe : brouillons annotés par le gérant à réécrire + envoyer (dossier SAV_Corriger).
+    const corrections = await fetchUnseenFrom(client, config.folders.correct, { onlyUnseen: false });
+    if (corrections.length) console.log(`${corrections.length} correction(s) du gérant à envoyer.`);
+    for (const email of corrections) {
+      stats.total++;
+      try {
+        const r = await processCorrection(client, email);
+        stats[r.action] = (stats[r.action] || 0) + 1;
+      } catch (err) {
+        stats.error++;
+        console.error(`  ❌ erreur correction ${email.to}: ${err.message}`);
+        try { await moveFromFolder(client, config.folders.correct, email.uid, config.folders.error); } catch {}
       }
     }
   } finally {
