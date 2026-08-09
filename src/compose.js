@@ -19,6 +19,7 @@ RÈGLES ABSOLUES :
 - Ne récite pas l'adresse complète du client, sauf si sa demande concerne justement l'adresse.
 - Ne mets PAS d'objet, PAS de "Cc".
 - IMPORTANT : n'écris AUCUNE formule de clôture ni signature (pas de « Atentamente », pas de « Un saludo », pas de nom d'équipe, JAMAIS de crochets comme « [Nom] » ou « [Bexanova] »). Termine simplement par ta dernière phrase utile — la signature est ajoutée automatiquement après.
+- TOUT À LA FIN, après ta réponse complète au client, ajoute une ligne contenant exactement « ---RESUME_FR--- », puis EN DESSOUS une seule phrase EN FRANÇAIS qui résume ce que dit ta réponse (pour le gérant qui ne lit pas l'espagnol). Cette phrase française ne sera JAMAIS envoyée au client.
 
 ═══ RÈGLES & RESSOURCES BEXANOVA (applique-les quand c'est pertinent) ═══
 - 📘 eBook offert « La Verdad Sobre el Vientre Postparto » : si la cliente dit qu'elle n'a pas reçu le livre numérique / eBook, ou le réclame, DONNE-LUI directement ce lien de téléchargement dans ta réponse :
@@ -102,6 +103,8 @@ ${missingInfo?.length ? `Informations manquantes à demander (uniquement celles-
 DONNÉES (source de vérité — ne rien ajouter, ne rien inventer) :
 ${factsBlock(order)}
 
-Rédige maintenant l'email de réponse (SANS signature ni formule de clôture — elle sera ajoutée automatiquement).`;
-  return completeText(SYSTEM, user, 1200);
+Rédige maintenant l'email de réponse (SANS signature ni formule de clôture — elle sera ajoutée automatiquement), puis la ligne ---RESUME_FR--- et son résumé en français.`;
+  const raw = await completeText(SYSTEM, user, 1300);
+  const parts = raw.split(/---\s*RESUME_FR\s*---/i);
+  return { reply: (parts[0] || raw).trim(), summaryFr: (parts[1] || '').trim() };
 }

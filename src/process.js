@@ -47,13 +47,14 @@ function statutFr(s) {
   if (u === 'UNFULFILLED' || u === '') return 'pas encore expédiée';
   return s;
 }
-function buildOwnerNote({ analysis, order, customerEmail, fromName }) {
+function buildOwnerNote({ analysis, order, customerEmail, fromName, replySummaryFr }) {
   return [
     `👤 Client : ${fromName || ''} <${customerEmail}>`,
     `📩 Demande : ${analysis.summaryFr}`,
     `📦 Commande : ${order ? `#${order.orderNumber} (${statutFr(order.fulfillmentStatus)})` : 'aucune commande trouvée'}`,
     `🏷️ Type : ${INTENT_FR[analysis.intent] || analysis.intent}`,
-    `✅ Reco : réponse prudente rédigée en espagnol ci-dessous. Relis, puis effectue l'action (remboursement / annulation / échange) dans Shopify si tu es d'accord.`,
+    `🤖 Le robot répond (résumé) : ${replySummaryFr || '(voir la réponse ci-dessous)'}`,
+    `✅ Reco : relis, puis effectue l'action (remboursement / annulation / échange) dans Shopify si tu es d'accord.`,
   ].join('\n');
 }
 
@@ -148,8 +149,9 @@ export async function processEmail(client, email) {
     return { ...analysis, action: 'skip' };
   }
 
-  // 5) Rédaction
-  const body = await composeReply({ analysis, order, missingInfo, senderName: email.fromName });
+  // 5) Rédaction (réponse client + résumé FR pour le gérant)
+  const composed = await composeReply({ analysis, order, missingInfo, senderName: email.fromName });
+  const body = composed.reply;
 
   // 6) Envoi ou mise en attente de validation
   const mail = {
@@ -168,7 +170,7 @@ export async function processEmail(client, email) {
     log(`✅ répondu automatiquement (${decision.reason})`);
     return { ...analysis, action: 'send', order: order?.orderNumber || null };
   } else {
-    mail.ownerNote = buildOwnerNote({ analysis, order, customerEmail, fromName: email.fromName });
+    mail.ownerNote = buildOwnerNote({ analysis, order, customerEmail, fromName: email.fromName, replySummaryFr: composed.summaryFr });
     await appendDraft(client, mail);
     await moveToFolder(client, email.uid, config.folders.validate);
     log(`📝 brouillon à valider (${decision.reason})`);
