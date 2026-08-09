@@ -57,15 +57,26 @@ function buildOwnerNote({ analysis, order, customerEmail, fromName }) {
   ].join('\n');
 }
 
+// Récupère l'email de la cliente dans le texte (note jaune « Client : ... <email> ») si le champ "À" est perdu.
+function customerEmailFromText(text, self) {
+  const found = (String(text || '').match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || [])
+    .map(e => e.toLowerCase())
+    .filter(e => e !== self && !e.includes('bexanova.com') && !e.includes('shopify.com'));
+  return found[0] || null;
+}
+
 // Traite un brouillon annoté par le gérant (dossier SAV_Corriger) : applique la consigne et envoie au client.
 export async function processCorrection(client, email) {
   const self = (config.smtp.user || '').toLowerCase();
-  const to = email.to && email.to !== self ? email.to : null;
+  // Destinataire : le champ "À" s'il est valide, sinon l'email trouvé dans la note jaune.
+  const to = (email.to && email.to !== self && !email.to.includes('bexanova.com') ? email.to : null)
+    || customerEmailFromText(email.text, self);
   if (!to) {
     console.log(`  [correction] ⚠️ destinataire client introuvable → SAV_Erreur`);
     await moveFromFolder(client, config.folders.correct, email.uid, config.folders.error);
     return { action: 'error' };
   }
+  console.log(`  [correction] destinataire = ${to}`);
   const body = await reviseReply(email.text);
   await sendReply(client, {
     to,
