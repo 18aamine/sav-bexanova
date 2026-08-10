@@ -6,7 +6,7 @@ export const INTENTS = [
   'ou_est_ma_commande', 'rien_recu', 'colis_en_retard', 'modifier_adresse',
   'mauvaise_adresse', 'annulation', 'remboursement', 'echange', 'taille',
   'produit_manquant', 'produit_defectueux', 'colis_perdu', 'livre_non_recu',
-  'suivi', 'demande_avant_achat', 'info_produit', 'reclamation', 'autre', 'ignorer',
+  'suivi', 'demande_avant_achat', 'info_produit', 'reclamation', 'guide_non_recu', 'autre', 'ignorer',
 ];
 
 const SYSTEM = `Tu es un module d'analyse pour le SAV d'une boutique e-commerce (Bexanova, faja/shapewear, marché ES/FR/EN).
@@ -16,6 +16,7 @@ Tu n'inventes RIEN : si une info n'est pas dans l'email, mets null.
 Champs à renvoyer :
 - "language": code ISO ("es", "fr", "en" — la langue dans laquelle répondre au client).
 - "intent": une valeur EXACTE parmi: ${INTENTS.join(', ')}.
+  * "guide_non_recu" = la cliente dit qu'elle n'a pas reçu le livre numérique / eBook / la guía / le guide (offert avec sa commande), ou le réclame. (Prioritaire sur "produit_manquant" quand il s'agit du guide/eBook numérique.)
   * "ignorer" = ce n'est pas une demande client (spam, pub, fournisseur, notification automatique).
 - "order_number": le numéro de commande mentionné (chiffres uniquement) ou null.
 - "customer_name": nom complet du client s'il est donné dans le corps/signature, sinon null.

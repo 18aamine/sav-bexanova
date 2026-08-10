@@ -11,7 +11,7 @@ const SENSITIVE = new Set([
 // Cas simples et informatifs => envoi auto possible (si on a les données).
 const SAFE = new Set([
   'ou_est_ma_commande', 'colis_en_retard', 'suivi', 'rien_recu',
-  'taille', 'demande_avant_achat', 'info_produit', 'autre',
+  'taille', 'demande_avant_achat', 'info_produit', 'guide_non_recu', 'autre',
 ]);
 
 // Décide l'action finale.

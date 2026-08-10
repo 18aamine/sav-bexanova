@@ -7,7 +7,7 @@ import { composeReply, reviseReply } from './compose.js';
 import { moveToFolder, moveFromFolder, appendDraft, sendReply } from './mailbox.js';
 
 // Intentions qui n'ont pas besoin d'une commande pour répondre.
-const NO_ORDER_NEEDED = new Set(['demande_avant_achat', 'info_produit', 'taille']);
+const NO_ORDER_NEEDED = new Set(['demande_avant_achat', 'info_produit', 'taille', 'guide_non_recu']);
 
 // Lien de suivi pour le footer : suivi réel de la commande si dispo, sinon page ParcelPanel générale.
 function trackingUrlFor(order) {
@@ -38,7 +38,7 @@ const INTENT_FR = {
   modifier_adresse: "Modifier l'adresse", mauvaise_adresse: 'Mauvaise adresse', annulation: 'Annulation',
   remboursement: 'Remboursement', echange: 'Échange', taille: 'Question de taille', produit_manquant: 'Produit manquant',
   produit_defectueux: 'Produit défectueux', colis_perdu: 'Colis perdu', livre_non_recu: 'Livré mais non reçu',
-  suivi: 'Suivi', demande_avant_achat: 'Question avant achat', info_produit: 'Info produit', reclamation: 'Réclamation', autre: 'Autre',
+  suivi: 'Suivi', demande_avant_achat: 'Question avant achat', info_produit: 'Info produit', reclamation: 'Réclamation', guide_non_recu: 'Guide/eBook non reçu', autre: 'Autre',
 };
 function statutFr(s) {
   const u = (s || '').toUpperCase();
