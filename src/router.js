@@ -23,6 +23,11 @@ export function route({ intent, order }) {
   // Interrupteur global : si AUTO_SEND=false, tout passe en validation.
   if (!config.autoSend) return { action: 'draft', reason: 'AUTO_SEND désactivé' };
 
+  // Mode 100% auto : tout est envoyé automatiquement (la rédaction reste prudente sur les cas sensibles).
+  if (config.autoSendSensitive) {
+    return { action: 'send', reason: SENSITIVE.has(intent) ? 'cas sensible (auto, ton prudent)' : 'cas simple' };
+  }
+
   if (SENSITIVE.has(intent)) return { action: 'draft', reason: 'cas sensible' };
 
   // Garde-fou : "rien reçu" alors que le tracking indique livré => litige, à valider.

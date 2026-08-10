@@ -80,6 +80,14 @@ export async function moveFromFolder(client, sourceFolder, uid, targetFolder) {
   }
 }
 
+// Marque un mail comme lu tout de suite (anti-doublon : il ne sera jamais retraité même si le run plante).
+export async function markSeen(client, uid) {
+  if (config.dryRun) return;
+  const lock = await client.getMailboxLock(config.imap.inbox);
+  try { await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true }); }
+  finally { lock.release(); }
+}
+
 // Déplace un message (par UID) vers un dossier de classement, et le marque lu.
 export async function moveToFolder(client, uid, folder) {
   if (config.dryRun) return;

@@ -3,11 +3,20 @@ import { config } from './config.js';
 import { analyzeEmail } from './intent.js';
 import { findOrder } from './shopify.js';
 import { route } from './router.js';
-import { composeReply, reviseReply } from './compose.js';
+import { composeReply, reviseReply, summarizeReplyFr } from './compose.js';
 import { moveToFolder, moveFromFolder, appendDraft, sendReply } from './mailbox.js';
 
 // Intentions qui n'ont pas besoin d'une commande pour répondre.
 const NO_ORDER_NEEDED = new Set(['demande_avant_achat', 'info_produit', 'taille', 'guide_non_recu']);
+
+// Après réponse auto, on classe le mail dans le bon dossier d'action pour le gérant.
+const REFUND_INTENTS = new Set(['remboursement', 'annulation']);
+const AGENT_INTENTS = new Set(['echange', 'produit_defectueux', 'produit_manquant', 'colis_perdu', 'livre_non_recu', 'reclamation', 'modifier_adresse', 'mauvaise_adresse']);
+function destinationFolder(intent) {
+  if (REFUND_INTENTS.has(intent)) return config.folders.refunds;   // → SAV_Remboursements
+  if (AGENT_INTENTS.has(intent)) return config.folders.agent;      // → SAV_Agente
+  return config.folders.done;                                      // → SAV_Traite (rien à faire)
+}
 
 // Lien de suivi pour le footer : suivi réel de la commande si dispo, sinon page ParcelPanel générale.
 function trackingUrlFor(order) {
@@ -149,9 +158,8 @@ export async function processEmail(client, email) {
     return { ...analysis, action: 'skip' };
   }
 
-  // 5) Rédaction (réponse client + résumé FR pour le gérant)
-  const composed = await composeReply({ analysis, order, missingInfo, senderName: email.fromName });
-  const body = composed.reply;
+  // 5) Rédaction de la réponse client
+  const body = await composeReply({ analysis, order, missingInfo, senderName: email.fromName });
 
   // 6) Envoi ou mise en attente de validation
   const mail = {
@@ -166,13 +174,16 @@ export async function processEmail(client, email) {
 
   if (decision.action === 'send') {
     await sendReply(client, mail);
-    await moveToFolder(client, email.uid, config.folders.done);
-    log(`✅ répondu automatiquement (${decision.reason})`);
+    const dest = destinationFolder(analysis.intent);
+    await moveToFolder(client, email.uid, dest);
+    log(`✅ répondu automatiquement (${decision.reason}) → ${dest}`);
     return { ...analysis, action: 'send', order: order?.orderNumber || null };
   } else {
-    mail.ownerNote = buildOwnerNote({ analysis, order, customerEmail, fromName: email.fromName, replySummaryFr: composed.summaryFr });
+    const replySummaryFr = await summarizeReplyFr(body); // résumé fiable de la réponse écrite
+    mail.ownerNote = buildOwnerNote({ analysis, order, customerEmail, fromName: email.fromName, replySummaryFr });
     await appendDraft(client, mail);
-    await moveToFolder(client, email.uid, config.folders.validate);
+    // Seul le brouillon reste dans SAV_A_valider ; l'original part dans SAV_Traite (moins d'encombrement).
+    await moveToFolder(client, email.uid, config.folders.done);
     log(`📝 brouillon à valider (${decision.reason})`);
     return { ...analysis, action: 'draft', order: order?.orderNumber || null };
   }

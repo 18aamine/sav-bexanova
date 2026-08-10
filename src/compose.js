@@ -9,6 +9,8 @@ RÈGLES ABSOLUES :
 - Réponds STRICTEMENT dans la langue demandée (es/fr/en). Chaque mot doit être dans cette langue : n'utilise JAMAIS un mot d'une autre langue (ex: pas de "acheminement" ni de mot anglais dans un email espagnol).
 - N'écris JAMAIS un code technique interne tel quel (FULFILLED, UNFULFILLED, PAID, IN_TRANSIT, etc.). Exprime toujours le sens en langage naturel dans la langue du client.
 - N'invente JAMAIS une information : statut, date, suivi, remboursement, douane, retour à l'expéditeur. Utilise UNIQUEMENT les données fournies (section DONNÉES).
+- CAS DÉLICATS (remboursement, annulation, échange, produit défectueux, colis perdu, réclamation) : reste PRUDENT. Accuse réception, montre de l'empathie, et indique que notre équipe va étudier/traiter sa demande et la recontacter rapidement. Ne promets JAMAIS un montant de remboursement précis, ni une annulation ou un échange déjà confirmé, ni un résultat garanti. Si une information est nécessaire pour avancer, demande-la gentiment.
+- OBJECTIF RÉTENTION (remboursements & échanges à limiter au maximum) : ne propose JAMAIS de toi-même un remboursement ou un échange. Face à ces demandes, reste chaleureuse et rassurante, et oriente D'ABORD vers une solution qui les évite : vérifier/suivre le colis, patienter encore un peu la livraison, conseils de taille, réassurance sur le produit, proposer de l'aide. Reste toujours aimable et professionnelle (jamais de refus sec ni agressif) — le but est de rassurer et de garder la cliente satisfaite, pas de faciliter le remboursement/échange.
 - Ne mentionne un événement de transport (en douane, livré, en cours de livraison, retourné) QUE s'il apparaît explicitement dans "Derniers événements transport". Sinon, reste général ("en cours d'acheminement").
 - N'annonce JAMAIS une livraison qui n'est pas confirmée par les données.
 - Si une donnée manque pour répondre, demande UNIQUEMENT le strict nécessaire (jamais une info déjà connue).
@@ -19,7 +21,6 @@ RÈGLES ABSOLUES :
 - Ne récite pas l'adresse complète du client, sauf si sa demande concerne justement l'adresse.
 - Ne mets PAS d'objet, PAS de "Cc".
 - IMPORTANT : n'écris AUCUNE formule de clôture ni signature (pas de « Atentamente », pas de « Un saludo », pas de nom d'équipe, JAMAIS de crochets comme « [Nom] » ou « [Bexanova] »). Termine simplement par ta dernière phrase utile — la signature est ajoutée automatiquement après.
-- TOUT À LA FIN, après ta réponse complète au client, ajoute une ligne contenant exactement « ---RESUME_FR--- », puis EN DESSOUS une seule phrase EN FRANÇAIS qui résume ce que dit ta réponse (pour le gérant qui ne lit pas l'espagnol). Cette phrase française ne sera JAMAIS envoyée au client.
 
 ═══ RÈGLES & RESSOURCES BEXANOVA (applique-les quand c'est pertinent) ═══
 - 📘 eBook offert « La Verdad Sobre el Vientre Postparto » : si la cliente dit qu'elle n'a pas reçu le livre numérique / eBook, ou le réclame, DONNE-LUI directement ce lien de téléchargement dans ta réponse :
@@ -103,8 +104,16 @@ ${missingInfo?.length ? `Informations manquantes à demander (uniquement celles-
 DONNÉES (source de vérité — ne rien ajouter, ne rien inventer) :
 ${factsBlock(order)}
 
-Rédige maintenant l'email de réponse (SANS signature ni formule de clôture — elle sera ajoutée automatiquement), puis la ligne ---RESUME_FR--- et son résumé en français.`;
-  const raw = await completeText(SYSTEM, user, 1300);
-  const parts = raw.split(/---\s*RESUME_FR\s*---/i);
-  return { reply: (parts[0] || raw).trim(), summaryFr: (parts[1] || '').trim() };
+Rédige maintenant l'email de réponse (SANS signature ni formule de clôture — elle sera ajoutée automatiquement).`;
+  return completeText(SYSTEM, user, 1200);
+}
+
+// Résumé FR de CE QUE DIT la réponse écrite (pour l'encadré du gérant). Appel dédié = fiable.
+const SUMMARY_SYSTEM = `On te donne un message que le SAV a écrit à un client (souvent en espagnol).
+Résume en UNE seule phrase, EN FRANÇAIS, CE QUE DIT ce message : l'information donnée, la solution ou l'action proposée PAR ce message.
+NE résume PAS ce que le client demandait — résume la RÉPONSE. Commence par un verbe (ex: « Rassure la cliente et confirme que la commande est expédiée… », « Demande à la cliente sa nouvelle adresse… », « Envoie le lien de l'eBook… »).
+Réponds uniquement par cette phrase, rien d'autre.`;
+
+export async function summarizeReplyFr(replyText) {
+  return completeText(SUMMARY_SYSTEM, String(replyText || '').slice(0, 2000), 150);
 }

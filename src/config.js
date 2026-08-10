@@ -47,6 +47,8 @@ export const config = {
     validate: opt('FOLDER_VALIDATE', 'SAV_A_valider'),   // brouillons à relire (cas sensibles)
     correct: opt('FOLDER_CORRECT', 'SAV_Corriger'),      // brouillons annotés par le gérant → à réécrire + envoyer
     archive: opt('FOLDER_ARCHIVE', 'SAV_Corrections'),   // archive des corrections faites (pour en tirer des règles)
+    refunds: opt('FOLDER_REFUNDS', 'SAV_Remboursements'),// remboursements/annulations à traiter par le gérant dans Shopify
+    agent: opt('FOLDER_AGENT', 'SAV_Agente'),            // cas à confier à l'agente (échange, défectueux, perdu, réclamation, adresse…)
     done: opt('FOLDER_DONE', 'SAV_Traite'),              // mails traités + répondus auto
     skipped: opt('FOLDER_SKIPPED', 'SAV_Ignore'),        // non-SAV (spam, fournisseur…)
     error: opt('FOLDER_ERROR', 'SAV_Erreur'),            // à traiter à la main
@@ -78,6 +80,7 @@ export const config = {
 
   // --- Comportement ---
   autoSend: bool('AUTO_SEND', true),     // false => tout part en brouillon "À valider"
+  autoSendSensitive: bool('AUTO_SEND_SENSITIVE', true), // true => cas sensibles aussi envoyés auto (ton prudent), rien en validation
   dryRun: bool('DRY_RUN', false),        // true => n'envoie/ne déplace rien, log seulement
   maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '8')),
   pauseBetweenMs: Number(opt('PAUSE_BETWEEN_MS', '8000')), // espace les appels IA (limite de débit gratuite)

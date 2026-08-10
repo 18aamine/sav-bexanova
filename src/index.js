@@ -1,7 +1,7 @@
 // Point d'entrée : ouvre la boîte, traite les mails non lus, classe, ferme.
 // Conçu pour être lancé par un cron (GitHub Actions) toutes les ~15 min.
 import { config } from './config.js';
-import { openMailbox, ensureFolders, fetchUnseen, fetchUnseenFrom, moveToFolder, moveFromFolder } from './mailbox.js';
+import { openMailbox, ensureFolders, fetchUnseen, fetchUnseenFrom, moveToFolder, moveFromFolder, markSeen } from './mailbox.js';
 import { processEmail, processCorrection } from './process.js';
 
 async function main() {
@@ -23,6 +23,7 @@ async function main() {
         await new Promise(r => setTimeout(r, config.pauseBetweenMs));
       }
       try {
+        await markSeen(client, email.uid); // anti-doublon : marqué lu avant traitement
         const r = await processEmail(client, email);
         stats[r.action] = (stats[r.action] || 0) + 1;
       } catch (err) {
