@@ -81,6 +81,7 @@ export const config = {
   // --- Comportement ---
   autoSend: bool('AUTO_SEND', true),     // false => tout part en brouillon "À valider"
   autoSendSensitive: bool('AUTO_SEND_SENSITIVE', true), // true => cas sensibles aussi envoyés auto (ton prudent), rien en validation
+  sortByAction: bool('SORT_BY_ACTION', false), // false => tout classé dans SAV_Traite (pas de dossiers Remboursements/Agente)
   dryRun: bool('DRY_RUN', false),        // true => n'envoie/ne déplace rien, log seulement
   maxEmailsPerRun: Number(opt('MAX_EMAILS_PER_RUN', '8')),
   pauseBetweenMs: Number(opt('PAUSE_BETWEEN_MS', '8000')), // espace les appels IA (limite de débit gratuite)

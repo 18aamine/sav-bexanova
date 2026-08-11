@@ -13,6 +13,7 @@ const NO_ORDER_NEEDED = new Set(['demande_avant_achat', 'info_produit', 'taille'
 const REFUND_INTENTS = new Set(['remboursement', 'annulation']);
 const AGENT_INTENTS = new Set(['echange', 'produit_defectueux', 'produit_manquant', 'colis_perdu', 'livre_non_recu', 'reclamation', 'modifier_adresse', 'mauvaise_adresse']);
 function destinationFolder(intent) {
+  if (!config.sortByAction) return config.folders.done;            // tout dans SAV_Traite
   if (REFUND_INTENTS.has(intent)) return config.folders.refunds;   // → SAV_Remboursements
   if (AGENT_INTENTS.has(intent)) return config.folders.agent;      // → SAV_Agente
   return config.folders.done;                                      // → SAV_Traite (rien à faire)
