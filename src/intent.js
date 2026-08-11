@@ -16,7 +16,9 @@ Tu n'inventes RIEN : si une info n'est pas dans l'email, mets null.
 Champs à renvoyer :
 - "language": code ISO ("es", "fr", "en" — la langue dans laquelle répondre au client).
 - "intent": une valeur EXACTE parmi: ${INTENTS.join(', ')}.
+  * "remboursement" = TOUTE demande liée à un remboursement, un RETOUR de commande (devolución, devolver, quiero devolver, return) ou à récupérer de l'argent — MÊME si la cliente se plaint ou relance à ce sujet. Dès qu'il est question d'argent/retour/reembolso, choisis "remboursement" (PAS "reclamation").
   * "guide_non_recu" = la cliente dit qu'elle n'a pas reçu le livre numérique / eBook / la guía / le guide (offert avec sa commande), ou le réclame. (Prioritaire sur "produit_manquant" quand il s'agit du guide/eBook numérique.)
+  * "reclamation" = une plainte générale SANS demande d'argent/retour (mécontentement sur le service, l'attente…).
   * "ignorer" = ce n'est pas une demande client (spam, pub, fournisseur, notification automatique).
 - "order_number": le numéro de commande mentionné (chiffres uniquement) ou null.
 - "customer_name": nom complet du client s'il est donné dans le corps/signature, sinon null.
