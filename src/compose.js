@@ -57,6 +57,8 @@ function factsBlock(order) {
     `Commande: ${order.orderNumber}`,
     `Date: ${order.date}`,
     `Paiement: ${humanFinancial(order.financialStatus)}`,
+    `Prix: sous-total ${order.subtotal || '?'} ${order.currency || ''}, réductions appliquées ${order.totalDiscounts || '0'} ${order.currency || ''}, total payé ${order.total || '?'} ${order.currency || ''}`,
+    `Codes promo utilisés sur la commande: ${order.discountCodes?.length ? order.discountCodes.join(', ') : 'aucun'}`,
     `Expédition: ${humanFulfillment(order.fulfillmentStatus)}`,
     order.cancelledAt ? `Annulée le: ${order.cancelledAt}` : null,
     order.shippingAddress ? `Adresse: ${[order.shippingAddress.address1, order.shippingAddress.zip, order.shippingAddress.city, order.shippingAddress.country].filter(Boolean).join(', ')}` : null,

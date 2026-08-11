@@ -29,6 +29,10 @@ const ORDER_FIELDS = `
   email
   customer { firstName lastName email }
   shippingAddress { name address1 address2 zip city province country phone }
+  discountCodes
+  subtotalPriceSet { presentmentMoney { amount currencyCode } }
+  totalDiscountsSet { presentmentMoney { amount currencyCode } }
+  totalPriceSet { presentmentMoney { amount currencyCode } }
   lineItems(first: 30) {
     nodes {
       title
@@ -62,6 +66,11 @@ function mapOrder(o) {
     email: o.email,
     customerName: [o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(' '),
     shippingAddress: o.shippingAddress,
+    discountCodes: o.discountCodes || [],
+    subtotal: o.subtotalPriceSet?.presentmentMoney?.amount,
+    totalDiscounts: o.totalDiscountsSet?.presentmentMoney?.amount,
+    total: o.totalPriceSet?.presentmentMoney?.amount,
+    currency: o.totalPriceSet?.presentmentMoney?.currencyCode,
     items: (o.lineItems?.nodes || []).map(li => ({
       title: li.title, quantity: li.quantity, variant: li.variantTitle, sku: li.sku,
     })),
