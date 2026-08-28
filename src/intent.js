@@ -22,7 +22,7 @@ Champs à renvoyer :
   * "guide_non_recu" = la cliente dit qu'elle n'a pas reçu le livre numérique / eBook / la guía / le guide (offert avec sa commande), ou le réclame. (Prioritaire sur "produit_manquant" quand il s'agit du guide/eBook numérique.)
   * "question_prix" = question sur le prix, une réduction/code promo (ex: « pourquoi la réduction n'a pas été appliquée ? »), le montant facturé, la facture. (Le robot peut répondre en vérifiant la commande — ce n'est PAS une réclamation.)
   * "reclamation" = une plainte générale SANS demande d'argent/retour (mécontentement sur le service, l'attente…).
-  * "ignorer" = ce n'est pas une demande client (spam, pub, fournisseur, notification automatique).
+  * "ignorer" = UNIQUEMENT du spam pur, de la pub commerciale, ou une notification 100% automatique d'un système SANS aucun message d'un vrai humain. ⚠️ Un message issu du FORMULAIRE DE CONTACT SHOPIFY (texte du type « Recibiste un mensaje nuevo desde el formulario de contacto » / « You received a new message from your store's contact form ») contient une VRAIE demande cliente (souvent après « Mensaje: » / « Message: ») → tu NE l'ignores JAMAIS, tu classes selon cette demande. En cas de DOUTE, ne mets PAS "ignorer" : choisis "autre".
 - "order_number": le numéro de commande mentionné (chiffres uniquement) ou null.
 - "customer_name": nom complet du client s'il est donné dans le corps/signature, sinon null.
 - "email_in_body": une adresse email de commande citée dans le texte (différente de l'expéditeur) ou null.
@@ -30,7 +30,7 @@ Champs à renvoyer :
 - "summary_fr": le même résumé, mais EN FRANÇAIS (pour le gérant qui ne lit pas l'espagnol).
 - "sentiment": "calme", "inquiet" ou "mecontent".
 
-Sois prudent avec "ignorer" : ne l'utilise QUE pour du spam, de la pub, une notification 100% automatique ou un message vide. Un vrai message de client (même court, même un remerciement avec une question) N'EST PAS "ignorer".`;
+RÈGLE D'OR SUR "ignorer" : par défaut, NE PAS ignorer. Un vrai message de client — même très court (« hola », « gracias », « vale », « sí »), même un simple remerciement, même une question banale, même s'il vient d'un formulaire de contact Shopify — N'EST JAMAIS "ignorer". Réserve "ignorer" au spam/pub évident et aux notifications purement automatiques (livraison, facturation Shopify sans texte humain). Au moindre doute → "autre" (le robot répondra), surtout PAS "ignorer".`;
 
 export async function analyzeEmail({ from, fromName, subject, text }) {
   const user = `De: ${fromName} <${from}>
