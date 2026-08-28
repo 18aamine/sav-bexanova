@@ -74,7 +74,7 @@ export const config = {
     },
     groq: {
       apiKey: opt('GROQ_API_KEY'),
-      model: opt('GROQ_MODEL', 'llama-3.1-8b-instant'),
+      model: opt('GROQ_MODEL', 'llama-3.3-70b-versatile'),
     },
   },
 

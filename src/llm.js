@@ -48,10 +48,21 @@ async function geminiComplete({ system, user, maxTokens = 1500, json = false }) 
   return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') ?? '';
 }
 
-async function groqComplete({ system, user, maxTokens = 1500, json = false }) {
-  const { apiKey, model } = config.llm.groq;
-  if (!apiKey) throw new Error('GROQ_API_KEY manquante (LLM_PROVIDER=groq).');
-  // Retry automatique sur limite de débit (429) : on respecte le délai indiqué par Groq.
+// Modèles Groq candidats : si Groq en supprime un (erreur 404), on bascule automatiquement sur le suivant.
+function groqCandidates() {
+  return [...new Set([
+    config.llm.groq.model,
+    'llama-3.3-70b-versatile',
+    'openai/gpt-oss-20b',
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'llama-3.1-8b-instant',
+    'gemma2-9b-it',
+  ].filter(Boolean))];
+}
+let workingGroqModel = null;
+
+// Un appel à un modèle donné, avec retry sur limite de débit (429).
+async function groqCall(apiKey, model, { system, user, maxTokens = 1500, json = false }) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -74,11 +85,34 @@ async function groqComplete({ system, user, maxTokens = 1500, json = false }) {
       await sleep(waitMs);
       continue;
     }
-    if (!res.ok) throw new Error(`Groq API ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content ?? '';
+    if (res.ok) return { ok: true, data: await res.json() };
+    return { ok: false, status: res.status, text: await res.text() };
   }
-  throw new Error('Groq API: limite de débit persistante après plusieurs tentatives.');
+  return { ok: false, status: 429, text: 'limite de débit persistante' };
+}
+
+async function groqComplete(opts) {
+  const { apiKey } = config.llm.groq;
+  if (!apiKey) throw new Error('GROQ_API_KEY manquante (LLM_PROVIDER=groq).');
+  // Le modèle qui marchait est essayé en premier, mais on garde les autres en repli.
+  const candidates = workingGroqModel
+    ? [...new Set([workingGroqModel, ...groqCandidates()])]
+    : groqCandidates();
+  let lastErr = '';
+  for (const model of candidates) {
+    const r = await groqCall(apiKey, model, opts);
+    if (r.ok) {
+      if (workingGroqModel !== model) { workingGroqModel = model; console.log(`  ℹ️ Modèle Groq actif : ${model}`); }
+      return r.data.choices?.[0]?.message?.content ?? '';
+    }
+    // Modèle inexistant / décommissionné / sans accès → on tente le suivant.
+    if (r.status === 404 || /model_not_found|does not exist|decommission|not exist/i.test(r.text || '')) {
+      lastErr = `modèle ${model} indisponible`;
+      continue;
+    }
+    throw new Error(`Groq API ${r.status}: ${r.text}`);
+  }
+  throw new Error(`Groq : aucun modèle disponible (${lastErr}). Vérifie les modèles sur console.groq.com/docs/models.`);
 }
 
 function complete(opts) {
