@@ -82,7 +82,7 @@ export const config = {
     },
     openrouter: {
       apiKey: opt('OPENROUTER_API_KEY'),
-      model: opt('OPENROUTER_MODEL', 'deepseek/deepseek-chat-v3-0324:free'),
+      model: opt('OPENROUTER_MODEL', 'google/gemma-4-31b-it:free'),
     },
     // Chaîne de fournisseurs gratuits : on essaie dans l'ordre, bascule auto si l'un est à court.
     chain: opt('LLM_CHAIN', 'openrouter,groq,cerebras').split(',').map(s => s.trim()).filter(Boolean),

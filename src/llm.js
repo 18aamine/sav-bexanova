@@ -180,15 +180,28 @@ async function cerebrasComplete(opts) {
 }
 
 // OpenRouter (gratuit via modèles « :free », OpenAI-compatible). Bascule auto entre modèles gratuits.
-function openrouterCandidates() {
-  return [...new Set([
-    config.llm.openrouter.model,
-    'deepseek/deepseek-chat-v3-0324:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'google/gemini-2.0-flash-exp:free',
-    'qwen/qwen-2.5-72b-instruct:free',
-    'meta-llama/llama-3.1-8b-instruct:free',
-  ].filter(Boolean))];
+// La liste des modèles gratuits change souvent → on la récupère EN DIRECT depuis OpenRouter (auto-adaptatif).
+let openrouterFreeCache = null;
+async function fetchOpenrouterFree() {
+  if (openrouterFreeCache) return openrouterFreeCache;
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/models');
+    const data = await res.json();
+    // Exclut les modèles non conversationnels ou trop spécialisés (audio, image, finance, sécurité…).
+    const exclude = /lyria|content-safety|omni|embed|audio|clip|note-preview|guard|image|vision|tts|whisper|rerank|-fin(:|$)|coder|code-|math/i;
+    // Ordre de préférence : modèles généralistes solides d'abord.
+    const PRIORITY = ['gemma-4', 'glm-5', 'glm', 'minimax-m3', 'minimax', 'qwen', 'llama-4', 'llama-3.3', 'llama', 'mistral', 'deepseek', 'nemotron-super', 'nemotron-ultra', 'gemma'];
+    const rank = (id) => { const i = PRIORITY.findIndex(p => id.includes(p)); return i < 0 ? 999 : i; };
+    openrouterFreeCache = (data.data || [])
+      .filter(m => String(m.pricing?.prompt) === '0' && !exclude.test(m.id || ''))
+      .map(m => m.id)
+      .sort((a, b) => rank(a) - rank(b));
+  } catch { openrouterFreeCache = []; }
+  return openrouterFreeCache;
+}
+async function openrouterCandidates() {
+  const live = await fetchOpenrouterFree();
+  return [...new Set([config.llm.openrouter.model, ...live].filter(Boolean))];
 }
 let workingOpenrouterModel = null;
 
@@ -228,9 +241,10 @@ async function openrouterCall(apiKey, model, { system, user, maxTokens = 1500, j
 async function openrouterComplete(opts) {
   const { apiKey } = config.llm.openrouter;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY manquante.');
+  const live = await openrouterCandidates();
   const candidates = workingOpenrouterModel
-    ? [...new Set([workingOpenrouterModel, ...openrouterCandidates()])]
-    : openrouterCandidates();
+    ? [...new Set([workingOpenrouterModel, ...live])]
+    : live;
   let lastErr = '';
   for (const model of candidates) {
     const r = await openrouterCall(apiKey, model, opts);
