@@ -179,7 +179,77 @@ async function cerebrasComplete(opts) {
   throw new Error(`Cerebras : aucun modèle disponible (${lastErr})`);
 }
 
-const PROVIDERS = { cerebras: cerebrasComplete, groq: groqComplete, gemini: geminiComplete, claude: claudeComplete };
+// OpenRouter (gratuit via modèles « :free », OpenAI-compatible). Bascule auto entre modèles gratuits.
+function openrouterCandidates() {
+  return [...new Set([
+    config.llm.openrouter.model,
+    'deepseek/deepseek-chat-v3-0324:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'google/gemini-2.0-flash-exp:free',
+    'qwen/qwen-2.5-72b-instruct:free',
+    'meta-llama/llama-3.1-8b-instruct:free',
+  ].filter(Boolean))];
+}
+let workingOpenrouterModel = null;
+
+async function openrouterCall(apiKey, model, { system, user, maxTokens = 1500, json = false }) {
+  const sys = json ? `${system}\n\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour.` : system;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${apiKey}`,
+        'X-Title': 'Bexanova SAV',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: user },
+        ],
+      }),
+    });
+    if (res.status === 429) {
+      const body = await res.text();
+      const m = body.match(/try again in ([\d.]+)s/i);
+      const waitMs = Math.min((m ? parseFloat(m[1]) * 1000 : (attempt + 1) * 3000) + 500, 12000);
+      await sleep(waitMs);
+      continue;
+    }
+    if (res.ok) return { ok: true, data: await res.json() };
+    return { ok: false, status: res.status, text: await res.text() };
+  }
+  return { ok: false, status: 429, text: 'limite de débit persistante' };
+}
+
+async function openrouterComplete(opts) {
+  const { apiKey } = config.llm.openrouter;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY manquante.');
+  const candidates = workingOpenrouterModel
+    ? [...new Set([workingOpenrouterModel, ...openrouterCandidates()])]
+    : openrouterCandidates();
+  let lastErr = '';
+  for (const model of candidates) {
+    const r = await openrouterCall(apiKey, model, opts);
+    if (r.ok) {
+      if (workingOpenrouterModel !== model) { workingOpenrouterModel = model; console.log(`  ℹ️ Modèle OpenRouter actif : ${model}`); }
+      const content = r.data.choices?.[0]?.message?.content;
+      if (content) return content;
+      lastErr = 'réponse vide'; continue; // modèle gratuit parfois indispo → suivant
+    }
+    if (r.status === 404 || r.status === 400 || /not exist|not found|no endpoints|not a valid model/i.test(r.text || '')) {
+      lastErr = `modèle ${model} indisponible`;
+      continue;
+    }
+    throw new Error(`OpenRouter API ${r.status}: ${r.text}`);
+  }
+  throw new Error(`OpenRouter : aucun modèle gratuit disponible (${lastErr})`);
+}
+
+const PROVIDERS = { openrouter: openrouterComplete, cerebras: cerebrasComplete, groq: groqComplete, gemini: geminiComplete, claude: claudeComplete };
 function providerHasKey(name) { return !!(config.llm[name] && config.llm[name].apiKey); }
 
 // Essaie chaque IA de la chaîne dans l'ordre ; bascule sur la suivante si l'une est à court/indispo.

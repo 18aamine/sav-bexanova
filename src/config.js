@@ -80,8 +80,12 @@ export const config = {
       apiKey: opt('CEREBRAS_API_KEY'),
       model: opt('CEREBRAS_MODEL', 'llama3.1-8b'),
     },
+    openrouter: {
+      apiKey: opt('OPENROUTER_API_KEY'),
+      model: opt('OPENROUTER_MODEL', 'deepseek/deepseek-chat-v3-0324:free'),
+    },
     // Chaîne de fournisseurs gratuits : on essaie dans l'ordre, bascule auto si l'un est à court.
-    chain: opt('LLM_CHAIN', 'cerebras,groq').split(',').map(s => s.trim()).filter(Boolean),
+    chain: opt('LLM_CHAIN', 'openrouter,groq,cerebras').split(',').map(s => s.trim()).filter(Boolean),
   },
 
   // --- Comportement ---
