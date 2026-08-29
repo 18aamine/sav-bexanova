@@ -63,7 +63,7 @@ let workingGroqModel = null;
 
 // Un appel à un modèle donné, avec retry sur limite de débit (429).
 async function groqCall(apiKey, model, { system, user, maxTokens = 1500, json = false }) {
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
@@ -81,7 +81,7 @@ async function groqCall(apiKey, model, { system, user, maxTokens = 1500, json = 
     if (res.status === 429) {
       const body = await res.text();
       const m = body.match(/try again in ([\d.]+)s/i);
-      const waitMs = Math.min((m ? parseFloat(m[1]) * 1000 : (attempt + 1) * 4000) + 600, 30000);
+      const waitMs = Math.min((m ? parseFloat(m[1]) * 1000 : (attempt + 1) * 3000) + 500, 12000);
       await sleep(waitMs);
       continue;
     }
