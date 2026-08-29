@@ -1,7 +1,7 @@
 // Point d'entrée : ouvre la boîte, traite les mails non lus, classe, ferme.
 // Conçu pour être lancé par un cron (GitHub Actions) toutes les ~15 min.
 import { config } from './config.js';
-import { openMailbox, ensureFolders, fetchUnseen, fetchUnseenFrom, moveToFolder, moveFromFolder, markSeen } from './mailbox.js';
+import { openMailbox, ensureFolders, fetchUnseen, fetchUnseenFrom, moveToFolder, moveFromFolder, markSeen, markUnseen } from './mailbox.js';
 import { processEmail, processCorrection } from './process.js';
 
 async function main() {
@@ -27,6 +27,12 @@ async function main() {
         const r = await processEmail(client, email);
         stats[r.action] = (stats[r.action] || 0) + 1;
       } catch (err) {
+        // IA indisponible / quota atteint : on remet le mail en attente et on ARRÊTE le passage (reprise auto plus tard).
+        if (/429|limite de débit|rate.?limit|Toutes les IA/i.test(err.message || '')) {
+          console.error(`  ⏸️ IA indisponible — mail remis en attente, arrêt du passage (reprise quand une IA se libère).`);
+          try { await markUnseen(client, email.uid); } catch {}
+          break;
+        }
         stats.error++;
         console.error(`  ❌ erreur sur ${email.from}: ${err.message}`);
         // On classe en "Erreur" pour traitement manuel, sans bloquer le reste.

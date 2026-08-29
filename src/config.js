@@ -76,6 +76,12 @@ export const config = {
       apiKey: opt('GROQ_API_KEY'),
       model: opt('GROQ_MODEL', 'llama-3.3-70b-versatile'),
     },
+    cerebras: {
+      apiKey: opt('CEREBRAS_API_KEY'),
+      model: opt('CEREBRAS_MODEL', 'llama3.1-8b'),
+    },
+    // Chaîne de fournisseurs gratuits : on essaie dans l'ordre, bascule auto si l'un est à court.
+    chain: opt('LLM_CHAIN', 'cerebras,groq').split(',').map(s => s.trim()).filter(Boolean),
   },
 
   // --- Comportement ---

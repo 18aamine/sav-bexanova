@@ -88,6 +88,14 @@ export async function markSeen(client, uid) {
   finally { lock.release(); }
 }
 
+// Remet un mail en "non lu" (utilisé si le quota IA est atteint : le mail sera repris automatiquement plus tard).
+export async function markUnseen(client, uid) {
+  if (config.dryRun) return;
+  const lock = await client.getMailboxLock(config.imap.inbox);
+  try { await client.messageFlagsRemove(uid, ['\\Seen'], { uid: true }); }
+  finally { lock.release(); }
+}
+
 // Déplace un message (par UID) vers un dossier de classement, et le marque lu.
 export async function moveToFolder(client, uid, folder) {
   if (config.dryRun) return;
