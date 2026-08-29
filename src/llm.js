@@ -115,11 +115,56 @@ async function groqComplete(opts) {
   throw new Error(`Groq : aucun modèle disponible (${lastErr}). Vérifie les modèles sur console.groq.com/docs/models.`);
 }
 
-function complete(opts) {
-  const p = config.llm.provider;
-  if (p === 'gemini') return geminiComplete(opts);
-  if (p === 'groq') return groqComplete(opts);
-  return claudeComplete(opts);
+// Cerebras (gratuit, généreux, OpenAI-compatible). Retry sur limite de débit.
+async function cerebrasComplete({ system, user, maxTokens = 1500, json = false }) {
+  const { apiKey, model } = config.llm.cerebras;
+  if (!apiKey) throw new Error('CEREBRAS_API_KEY manquante.');
+  const sys = json ? `${system}\n\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour.` : system;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: user },
+        ],
+      }),
+    });
+    if (res.status === 429) {
+      const body = await res.text();
+      const m = body.match(/try again in ([\d.]+)s/i);
+      const waitMs = Math.min((m ? parseFloat(m[1]) * 1000 : (attempt + 1) * 3000) + 500, 12000);
+      await sleep(waitMs);
+      continue;
+    }
+    if (!res.ok) throw new Error(`Cerebras API ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? '';
+  }
+  throw new Error('Cerebras API 429: limite de débit persistante');
+}
+
+const PROVIDERS = { cerebras: cerebrasComplete, groq: groqComplete, gemini: geminiComplete, claude: claudeComplete };
+function providerHasKey(name) { return !!(config.llm[name] && config.llm[name].apiKey); }
+
+// Essaie chaque IA de la chaîne dans l'ordre ; bascule sur la suivante si l'une est à court/indispo.
+async function complete(opts) {
+  const chain = config.llm.chain.filter(n => PROVIDERS[n] && providerHasKey(n));
+  if (chain.length === 0) throw new Error('Aucune clé IA configurée (CEREBRAS_API_KEY / GROQ_API_KEY / ANTHROPIC_API_KEY).');
+  let lastErr;
+  for (const name of chain) {
+    try {
+      return await PROVIDERS[name](opts);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`  ⚠️ IA « ${name} » indisponible → on essaie la suivante (${String(e.message || '').slice(0, 90)})`);
+    }
+  }
+  throw new Error(`Toutes les IA indisponibles — ${lastErr?.message || ''}`);
 }
 
 export async function completeText(system, user, maxTokens = 1500) {
