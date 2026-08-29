@@ -26,36 +26,91 @@ async function claudeComplete({ system, user, maxTokens = 1500, json = false }) 
   return data.content?.map(c => c.text).join('') ?? '';
 }
 
-async function geminiComplete({ system, user, maxTokens = 1500, json = false }) {
-  const { apiKey, model } = config.llm.gemini;
-  if (!apiKey) throw new Error('GEMINI_API_KEY manquante (LLM_PROVIDER=gemini).');
+// Modèles Gemini candidats (gratuits, généreux : ~1500 req/jour). Bascule auto si l'un est déprécié (404).
+// NB : les runners GitHub Actions sont aux USA → le tier gratuit Gemini fonctionne (pas de blocage régional).
+function geminiCandidates() {
+  return [...new Set([
+    config.llm.gemini.model,
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash-lite',
+    'gemini-flash-latest',
+  ].filter(Boolean))];
+}
+let workingGeminiModel = null;
+
+async function geminiCall(apiKey, model, { system, user, maxTokens = 1500, json = false }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: user }] }],
-      generationConfig: {
-        maxOutputTokens: maxTokens,
-        temperature: 0.4,
-        ...(json ? { responseMimeType: 'application/json' } : {}),
-      },
-    }),
-  });
-  if (!res.ok) throw new Error(`Gemini API ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') ?? '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          temperature: 0.4,
+          ...(json ? { responseMimeType: 'application/json' } : {}),
+        },
+      }),
+    });
+    if (res.status === 429) {
+      const body = await res.text();
+      const m = body.match(/retryDelay"?:\s*"?([\d.]+)s/i);
+      const waitMs = Math.min((m ? parseFloat(m[1]) * 1000 : (attempt + 1) * 4000) + 500, 15000);
+      await sleep(waitMs);
+      continue;
+    }
+    if (res.ok) return { ok: true, data: await res.json() };
+    return { ok: false, status: res.status, text: await res.text() };
+  }
+  return { ok: false, status: 429, text: 'limite de débit persistante' };
+}
+
+async function geminiComplete(opts) {
+  const { apiKey } = config.llm.gemini;
+  if (!apiKey) throw new Error('GEMINI_API_KEY manquante (LLM_PROVIDER=gemini).');
+  const candidates = workingGeminiModel
+    ? [...new Set([workingGeminiModel, ...geminiCandidates()])]
+    : geminiCandidates();
+  let lastErr = '', sawRate = false;
+  for (const model of candidates) {
+    const r = await geminiCall(apiKey, model, opts);
+    if (r.ok) {
+      if (workingGeminiModel !== model) { workingGeminiModel = model; console.log(`  ℹ️ Modèle Gemini actif : ${model}`); }
+      return r.data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') ?? '';
+    }
+    // Quota journalier du modèle atteint (429) → on ESCALADE vers le modèle suivant (ex: flash épuisé → flash-lite, quota plus gros).
+    if (r.status === 429) {
+      sawRate = true;
+      if (workingGeminiModel === model) workingGeminiModel = null; // ce modèle est à sec, ne plus le préférer
+      lastErr = `modèle ${model} en limite de débit`;
+      continue;
+    }
+    // Modèle inexistant / déprécié / non supporté → on tente le suivant.
+    if (r.status === 404 || r.status === 400 || /not found|not supported|deprecated|is not found|call ListModels/i.test(r.text || '')) {
+      lastErr = `modèle ${model} indisponible`;
+      continue;
+    }
+    throw new Error(`Gemini API ${r.status}: ${r.text}`);
+  }
+  // Si tous les modèles Gemini sont en 429 : on signale une limite de débit (le mail sera repris plus tard, pas mis en erreur).
+  if (sawRate) throw new Error(`Gemini : limite de débit sur tous les modèles gratuits (${lastErr})`);
+  throw new Error(`Gemini : aucun modèle disponible (${lastErr})`);
 }
 
 // Modèles Groq candidats : si Groq en supprime un (erreur 404), on bascule automatiquement sur le suivant.
 function groqCandidates() {
+  // Ordre qualité → volume : chaque modèle a son PROPRE quota de tokens/jour, donc on les enchaîne pour cumuler les seaux.
   return [...new Set([
-    config.llm.groq.model,
-    'llama-3.3-70b-versatile',
-    'openai/gpt-oss-20b',
+    config.llm.groq.model,        // openai/gpt-oss-120b par défaut (meilleure qualité, 200k tokens/j)
+    'openai/gpt-oss-120b',
+    'llama-3.3-70b-versatile',    // 100k tokens/j
+    'openai/gpt-oss-20b',         // 200k tokens/j
     'meta-llama/llama-4-scout-17b-16e-instruct',
-    'llama-3.1-8b-instant',
+    'llama-3.1-8b-instant',       // 500k tokens/j — gros volume, qualité moindre (dernier recours de charge)
     'gemma2-9b-it',
   ].filter(Boolean))];
 }
@@ -98,12 +153,19 @@ async function groqComplete(opts) {
   const candidates = workingGroqModel
     ? [...new Set([workingGroqModel, ...groqCandidates()])]
     : groqCandidates();
-  let lastErr = '';
+  let lastErr = '', sawRate = false;
   for (const model of candidates) {
     const r = await groqCall(apiKey, model, opts);
     if (r.ok) {
       if (workingGroqModel !== model) { workingGroqModel = model; console.log(`  ℹ️ Modèle Groq actif : ${model}`); }
       return r.data.choices?.[0]?.message?.content ?? '';
+    }
+    // Quota tokens/jour du modèle atteint (429) → chaque modèle Groq a son PROPRE quota → on tente le suivant.
+    if (r.status === 429) {
+      sawRate = true;
+      if (workingGroqModel === model) workingGroqModel = null; // ce modèle est à sec pour aujourd'hui
+      lastErr = `modèle ${model} en limite de débit`;
+      continue;
     }
     // Modèle inexistant / décommissionné / sans accès → on tente le suivant.
     if (r.status === 404 || /model_not_found|does not exist|decommission|not exist/i.test(r.text || '')) {
@@ -112,6 +174,8 @@ async function groqComplete(opts) {
     }
     throw new Error(`Groq API ${r.status}: ${r.text}`);
   }
+  // Tous les modèles Groq en 429 : on signale une limite de débit (le mail sera repris plus tard, PAS mis en erreur).
+  if (sawRate) throw new Error(`Groq : limite de débit sur tous les modèles gratuits (${lastErr})`);
   throw new Error(`Groq : aucun modèle disponible (${lastErr}). Vérifie les modèles sur console.groq.com/docs/models.`);
 }
 

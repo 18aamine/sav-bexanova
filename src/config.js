@@ -70,11 +70,11 @@ export const config = {
     },
     gemini: {
       apiKey: opt('GEMINI_API_KEY'),
-      model: opt('GEMINI_MODEL', 'gemini-2.0-flash'),
+      model: opt('GEMINI_MODEL', 'gemini-2.5-flash'),
     },
     groq: {
       apiKey: opt('GROQ_API_KEY'),
-      model: opt('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+      model: opt('GROQ_MODEL', 'openai/gpt-oss-120b'),
     },
     cerebras: {
       apiKey: opt('CEREBRAS_API_KEY'),
@@ -85,7 +85,11 @@ export const config = {
       model: opt('OPENROUTER_MODEL', 'google/gemma-4-31b-it:free'),
     },
     // Chaîne de fournisseurs gratuits : on essaie dans l'ordre, bascule auto si l'un est à court.
-    chain: opt('LLM_CHAIN', 'openrouter,groq,cerebras').split(',').map(s => s.trim()).filter(Boolean),
+    // groq d'abord (le plus fiable, sans carte, qualité gpt-oss-120b), puis gemini (gros réservoir SANS plafond
+    // de tokens/jour, ~1250 req/jour cumulées), puis openrouter en dernier recours (50 req/jour, modèles volatils).
+    // Chaque fournisseur épuise tous ses modèles (donc tous ses quotas de tokens séparés) avant de passer au suivant.
+    // (cerebras retiré : devenu payant — erreur 402. Rajoutable via LLM_CHAIN si un jour re-gratuit.)
+    chain: opt('LLM_CHAIN', 'groq,gemini,openrouter').split(',').map(s => s.trim()).filter(Boolean),
   },
 
   // --- Comportement ---
